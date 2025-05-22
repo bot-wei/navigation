@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园导航系统</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background-color: white;
+            border-radius: 0 5px 5px 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .map-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .map {
+            flex: 1;
+            min-width: 300px;
+            height: 500px;
+            margin-right: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #2c3e50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1a252f;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border-left: 4px solid #2c3e50;
+            white-space: pre-line;
+        }
+        .route-info {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .map-container {
+                flex-direction: column;
+            }
+            .map {
+                margin-right: 0;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+    <script src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak=kICDPjvklZC6zwGIbGoyO4KfdQmf3xKw"></script>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>校园导航系统</h1>
+    </header>
+
+    <div class="tabs">
+        <div class="tab active" onclick="openTab('outdoor')">室外导航</div>
+        <div class="tab" onclick="openTab('indoor')">室内导航</div>
+    </div>
+
+    <!-- 室外导航内容 -->
+    <div id="outdoor" class="tab-content active">
+        <div class="map-container">
+            <div id="baiduMap" class="map"></div>
+            <div class="controls">
+                <div class="form-group">
+                    <label for="startPoint">起点</label>
+                    <select id="startPoint">
+                        <option value="">-- 请选择起点 --</option>
+                        <option value="海棠8号">海棠8号楼</option>
+                        <option value="B楼">B楼</option>
+                        <option value="A楼">A楼</option>
+                        <option value="C楼">C楼</option>
+                        <option value="图书馆">图书馆</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="endPoint">终点</label>
+                    <select id="endPoint">
+                        <option value="">-- 请选择终点 --</option>
+                        <option value="海棠8号">海棠8号楼</option>
+                        <option value="B楼">B楼</option>
+                        <option value="A楼">A楼</option>
+                        <option value="C楼">C楼</option>
+                        <option value="图书馆">图书馆</option>
+                    </select>
+                </div>
+                <button onclick="planRoute()">开始导航</button>
+                <div class="route-info">
+                    <div>距离：<span id="distance">-</span></div>
+                    <div>时间：<span id="duration">-</span></div>
+                </div>
+                <div class="result" id="outdoorResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 室内导航内容 -->
+    <div id="indoor" class="tab-content">
+        <div class="map-container">
+            <div class="map">
+                <img src="entry.jpg" alt="教学楼平面图" id="indoorMap" style="width:75%;height:75%;object-fit:cover;">
+            </div>
+            <div class="controls">
+                <div class="form-group">
+                    <label for="indoorStart">起点</label>
+                    <select id="indoorStart">
+                        <option value="">-- 请选择起点 --</option>
+                        <optgroup label="通道口">
+                            <option value="st1">通道口1</option>
+                            <option value="st2">通道口2</option>
+                            <option value="st3">通道口3</option>
+                            <option value="st4">通道口4</option>
+                            <option value="st5">通道口5</option>
+                            <option value="st6">通道口6</option>
+                        </optgroup>
+                        <optgroup label="教室">
+                            <option value="101">101教室</option>
+                            <option value="105">105教室</option>
+                            <option value="107">107教室</option>
+                            <option value="201">201教室</option>
+                            <option value="206">206教室</option>
+                            <option value="211">211教室</option>
+                            <option value="301">301教室</option>
+                            <option value="306">306教室</option>
+                            <option value="312">312教室</option>
+                            <option value="318">318教室</option>
+                            <option value="320">320教室</option>
+                            <option value="401">401教室</option>
+                            <option value="406">406教室</option>
+                            <option value="412">412教室</option>
+                            <option value="418">418教室</option>
+                            <option value="426">426教室</option>
+                            <option value="501">501教室</option>
+                            <option value="506">506教室</option>
+                            <option value="507">507教室</option>
+                            <option value="513">513教室</option>
+                            <option value="516">516教室</option>
+                            <option value="601">601教室</option>
+                            <option value="605">605教室</option>
+                            <option value="608">608教室</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="indoorEnd">终点</label>
+                    <select id="indoorEnd">
+                        <option value="">-- 请选择终点 --</option>
+                        <optgroup label="通道口">
+                            <option value="st1">通道口1</option>
+                            <option value="st2">通道口2</option>
+                            <option value="st3">通道口3</option>
+                            <option value="st4">通道口4</option>
+                            <option value="st5">通道口5</option>
+                            <option value="st6">通道口6</option>
+                        </optgroup>
+                        <optgroup label="教室">
+                            <option value="101">101教室</option>
+                            <option value="105">105教室</option>
+                            <option value="107">107教室</option>
+                            <option value="201">201教室</option>
+                            <option value="206">206教室</option>
+                            <option value="211">211教室</option>
+                            <option value="301">301教室</option>
+                            <option value="306">306教室</option>
+                            <option value="312">312教室</option>
+                            <option value="318">318教室</option>
+                            <option value="320">320教室</option>
+                            <option value="401">401教室</option>
+                            <option value="406">406教室</option>
+                            <option value="412">412教室</option>
+                            <option value="418">418教室</option>
+                            <option value="426">426教室</option>
+                            <option value="501">501教室</option>
+                            <option value="506">506教室</option>
+                            <option value="507">507教室</option>
+                            <option value="513">513教室</option>
+                            <option value="516">516教室</option>
+                            <option value="601">601教室</option>
+                            <option value="605">605教室</option>
+                            <option value="608">608教室</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <button onclick="calculateIndoorRoute()">开始导航</button>
+                <div class="result" id="indoorResult"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 切换标签页
+    function openTab(tabName) {
+        const tabs = document.getElementsByClassName('tab');
+        const tabContents = document.getElementsByClassName('tab-content');
+
+        for (let i = 0; i < tabs.length; i++) {
+            tabs[i].classList.remove('active');
+        }
+
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove('active');
+        }
+
+        document.getElementById(tabName).classList.add('active');
+        event.currentTarget.classList.add('active');
+
+        // 当切换回室外导航时，重置地图大小
+        if (tabName === 'outdoor') {
+            setTimeout(() => {
+                map.checkResize();
+            }, 100);
+        }
+    }
+
+    // 室外导航 - 百度地图初始化
+    const buildings = {
+        "海棠8号": new BMapGL.Point(108.838751, 34.136529),
+        "B楼": new BMapGL.Point(108.837992, 34.132532),
+        "A楼": new BMapGL.Point(108.837422, 34.133123),
+        "C楼": new BMapGL.Point(108.839533, 34.132242),
+        "图书馆": new BMapGL.Point(108.8389, 34.131087)
+    };
+
+    // 初始化地图
+    const map = new BMapGL.Map("baiduMap");
+    map.centerAndZoom(buildings["图书馆"], 17);
+    map.enableScrollWheelZoom(true);
+
+    // 添加建筑物标记
+    Object.entries(buildings).forEach(([name, point]) => {
+        const marker = new BMapGL.Marker(point);
+        marker.setLabel(new BMapGL.Label(name, {offset: new BMapGL.Size(15, -10)}));
+        map.addOverlay(marker);
+    });
+
+    // 室外导航 - 计算路线
+    function planRoute() {
+        const start = document.getElementById('startPoint').value;
+        const end = document.getElementById('endPoint').value;
+        const resultDiv = document.getElementById('outdoorResult');
+
+        if (!start || !end) {
+            alert("请选择起点和终点");
+            return;
+        }
+
+        if (start === end) {
+            document.getElementById('distance').textContent = '-';
+            document.getElementById('duration').textContent = '-';
+            resultDiv.textContent = '起点和终点相同，无需导航';
+            return;
+        }
+
+        // 清除之前的路线
+        map.clearOverlays();
+
+        // 重新添加标记
+        Object.entries(buildings).forEach(([name, point]) => {
+            const marker = new BMapGL.Marker(point);
+            marker.setLabel(new BMapGL.Label(name, {offset: new BMapGL.Size(15, -10)}));
+            map.addOverlay(marker);
+        });
+
+        // 使用步行路线规划
+        const walking = new BMapGL.WalkingRoute(map, {
+            renderOptions: {map: map, autoViewport: true},
+            onSearchComplete: function(results) {
+                if (walking.getStatus() === BMAP_STATUS_SUCCESS) {
+                    const plan = results.getPlan(0);
+                    document.getElementById('distance').textContent =
+                        (plan.getDistance() / 1000).toFixed(1) + '公里';
+                    document.getElementById('duration').textContent =
+                        Math.ceil(plan.getDuration() / 60) + '分钟';
+
+                    // 显示路线描述
+                    let routeText = `从${start}到${end}的步行路线：\n`;
+                    const steps = plan.getRoute(0).getPath();
+                    steps.forEach((step, index) => {
+                        routeText += `${index + 1}. 经度: ${step.lng.toFixed(6)}, 纬度: ${step.lat.toFixed(6)}\n`;
+                    });
+                    resultDiv.textContent = routeText;
+                } else {
+                    document.getElementById('distance').textContent = '-';
+                    document.getElementById('duration').textContent = '-';
+                    resultDiv.textContent = '无法计算路线，请稍后再试';
+                }
+            }
+        });
+
+        walking.search(buildings[start], buildings[end]);
+    }
+
+    // 室内导航 - 计算路线
+    function calculateIndoorRoute() {
+        const start = document.getElementById('indoorStart').value;
+        const end = document.getElementById('indoorEnd').value;
+        const resultDiv = document.getElementById('indoorResult');
+
+        if (!start || !end) {
+            resultDiv.textContent = '请选择起点和终点';
+            return;
+        }
+
+        if (start === end) {
+            resultDiv.textContent = '起点和终点相同，无需导航';
+            return;
+        }
+
+        // 模拟室内路线计算
+        const graph = initIndoorGraph();
+        const startLabel = start.startsWith('st') ? '通道口' + start.substring(2) : start + '教室';
+        const endLabel = end.startsWith('st') ? '通道口' + end.substring(2) : end + '教室';
+
+        try {
+            const result = graph.dijkstra(start, end);
+            if (result.includes("路径不存在") || result.includes("教室编号不存在") || result.includes("起点有误")) {
+                resultDiv.textContent = `无法找到从 ${startLabel} 到 ${endLabel} 的路径`;
+            } else {
+                resultDiv.textContent = result;
+            }
+        } catch (e) {
+            resultDiv.textContent = `计算路线时出错: ${e.message}`;
+        }
+    }
+
+    // 室内导航图数据结构
+    function initIndoorGraph() {
+        const graph = {
+            vNum: 0,
+            eNum: 0,
+            g: [],
+            nodes: [],
+            vlookup: {},
+            horizon: new Set(),
+            vertical: new Set(),
+
+            addNode: function(label) {
+                if (!this.vlookup[label] && label !== "---") {
+                    this.nodes.push(label);
+                    this.g.push({});
+                    this.vlookup[label] = this.vNum++;
+                }
+            },
+
+            addEdge: function(u, v, d, dire) {
+                const uId = this.vlookup[u];
+                const vId = this.vlookup[v];
+
+                if (uId === undefined || vId === undefined) {
+                    console.error("节点不存在: " + u + " 或 " + v);
+                    return;
+                }
+
+                this.g[uId][vId] = d;
+                this.g[vId][uId] = d;
+                this.eNum++;
+
+                if (dire === "walk") {
+                    this.horizon.add(JSON.stringify([uId, vId]));
+                    this.horizon.add(JSON.stringify([vId, uId]));
+                } else if (dire === "up") {
+                    this.vertical.add(JSON.stringify([uId, vId]));
+                    this.vertical.add(JSON.stringify([vId, uId]));
+                }
+            },
+
+            containsPair: function(set, a, b) {
+                return set.has(JSON.stringify([a, b])) || set.has(JSON.stringify([b, a]));
+            },
+
+            dijkstra: function(start, end) {
+                const startId = this.vlookup[start];
+                const endId = this.vlookup[end];
+
+                if (startId === undefined) return "起点有误";
+                if (endId === undefined) return "教室编号不存在";
+
+                const dis = new Array(this.vNum).fill(Infinity);
+                const path = new Array(this.vNum).fill(-1);
+                const vis = new Array(this.vNum).fill(false);
+
+                const pq = [];
+                dis[startId] = 0;
+                pq.push([0, startId]);
+                pq.sort((a, b) => a[0] - b[0]);
+
+                while (pq.length > 0) {
+                    const [disNow, uNow] = pq.shift();
+
+                    if (vis[uNow]) continue;
+                    vis[uNow] = true;
+
+                    for (const [vToStr, distUV] of Object.entries(this.g[uNow])) {
+                        const vTo = parseInt(vToStr);
+                        if (!vis[vTo] && disNow + distUV < dis[vTo]) {
+                            dis[vTo] = disNow + distUV;
+                            path[vTo] = uNow;
+                            pq.push([dis[vTo], vTo]);
+                            pq.sort((a, b) => a[0] - b[0]);
+                        }
+                    }
+                }
+
+                if (dis[endId] === Infinity) return "路径不存在";
+
+                const route = [];
+                let current = endId;
+                while (current !== startId && current !== -1) {
+                    route.unshift(current);
+                    current = path[current];
+                }
+                route.unshift(startId);
+
+                let realRoute = "";
+                const startLabel = this.nodes[startId];
+                realRoute += `从${startLabel.startsWith("st") ? "通道口" + startLabel.substring(2) : startLabel}出发\n`;
+
+                let now = startId;
+                for (const u of route) {
+                    if (u === startId) continue;
+
+                    const label = this.nodes[u];
+                    const displayLabel = label.startsWith("st") ? "通道口" + label.substring(2) : label;
+
+                    if (this.containsPair(this.horizon, now, u)) {
+                        const direction = this.vlookup[this.nodes[now]] < u ? "东" : "西";
+                        realRoute += `往${direction}走到${displayLabel}\n`;
+                    } else if (this.containsPair(this.vertical, now, u)) {
+                        const direction = this.vlookup[this.nodes[now]] < u ? "上" : "下";
+                        realRoute += `${direction}楼走到${displayLabel}\n`;
+                    } else {
+                        realRoute += `走到${displayLabel}\n`;
+                    }
+                    now = u;
+                }
+
+                return realRoute;
+            }
+        };
+
+        // 初始化图数据
+        const spanDistance = 10;
+        const height = 4;
+
+        // 添加节点
+        const levels = [
+            ["---", "---", "---", "st1", "01x", "st2", "st3", "02x", "st4", "03x", "04x", "st5", "05x", "st6", "---", "---", "---"],
+            ["|01", "101", "10x", "105", "106", "107"],
+            ["|02", "201", "203", "206", "207", "208", "211", "215", "216", "217"],
+            ["|03", "301", "303", "306", "307", "308", "311", "312", "314", "315", "316", "318", "31x", "320"],
+            ["|04", "401", "403", "406", "407", "408", "411", "412", "414", "415", "416", "418", "419", "421", "422", "425", "426"],
+            ["|05", "50x", "501", "|15", "502", "503", "506", "507", "509", "510", "511", "513", "514", "516", "517", "520", "521"],
+            ["---", "---", "---", "---", "---", "---", "|36", "601", "60x", "602", "603", "605", "606", "608", "609", "612", "613"],
+            ["---", "---", "---", "---", "---", "---", "---", "---", "---", "---", "---", "|57", "701", "|67", "703", "706", "707"]
+        ];
+
+        levels.forEach(floor => {
+            floor.forEach(node => {
+                graph.addNode(node);
+            });
+        });
+
+        // 添加水平连接
+        levels.forEach(floor => {
+            for (let i = 1; i < floor.length; i++) {
+                const prev = floor[i-1];
+                const curr = floor[i];
+                if (prev !== "---" && curr !== "---") {
+                    graph.addEdge(prev, curr, spanDistance, "walk");
+                }
+            }
+        });
+
+        // 添加垂直连接
+        graph.addEdge("st1", "105", 0, "up");
+        graph.addEdge("st2", "107", 0, "up");
+        graph.addEdge("st3", "211", height / 2, "up");
+        graph.addEdge("st4", "312", height, "up");
+        graph.addEdge("st5", "318", 0, "up");
+        graph.addEdge("st6", "320", 0, "up");
+
+        graph.addEdge("|01", "|02", height, "up");
+        graph.addEdge("|02", "|03", height, "up");
+        graph.addEdge("|03", "|04", height, "up");
+        graph.addEdge("|04", "|05", height, "up");
+
+        graph.addEdge("105", "206", height, "up");
+        graph.addEdge("206", "306", height, "up");
+        graph.addEdge("306", "406", height, "up");
+        graph.addEdge("406", "|15", height, "up");
+
+        graph.addEdge("107", "208", height, "up");
+        graph.addEdge("208", "308", height, "up");
+        graph.addEdge("308", "408", height, "up");
+        graph.addEdge("408", "503", height, "up");
+
+        graph.addEdge("211", "311", height, "up");
+        graph.addEdge("311", "411", height, "up");
+        graph.addEdge("411", "506", height, "up");
+        graph.addEdge("506", "|36", height, "up");
+
+        graph.addEdge("312", "412", height, "up");
+        graph.addEdge("412", "507", height, "up");
+        graph.addEdge("507", "601", height, "up");
+
+        graph.addEdge("318", "418", height, "up");
+        graph.addEdge("418", "513", height, "up");
+        graph.addEdge("513", "605", height, "up");
+        graph.addEdge("605", "|57", height, "up");
+
+        graph.addEdge("320", "421", height, "up");
+        graph.addEdge("421", "516", height, "up");
+        graph.addEdge("516", "608", height, "up");
+        graph.addEdge("608", "|67", height, "up");
+
+        // 添加北楼节点
+        const Nlevel4 = ["442", "443", "437", "434", "433"];
+        const Nlevel5 = ["538", "537", "532", "529", "528"];
+        Nlevel4.forEach(node => graph.addNode(node));
+        Nlevel5.forEach(node => graph.addNode(node));
+
+        // 添加北楼水平连接
+        for (let i = 1; i < Nlevel4.length; i++) {
+            graph.addEdge(Nlevel4[i-1], Nlevel4[i], spanDistance * 3, "walk");
+        }
+        for (let i = 1; i < Nlevel5.length; i++) {
+            graph.addEdge(Nlevel5[i-1], Nlevel5[i], spanDistance * 3, "walk");
+        }
+
+        // 添加北楼垂直连接
+        graph.addEdge("st3", "443", height, "up");
+        graph.addEdge("st5", "434", height, "up");
+        graph.addEdge("443", "537", height, "up");
+        graph.addEdge("434", "529", height, "up");
+
+        return graph;
+    }
+</script>
+</body>
+</html>
